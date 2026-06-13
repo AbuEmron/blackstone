@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { LayoutDashboard, MapPin, Users, CalendarDays, Inbox, Plus, Check, X, UserCog } from "lucide-react";
+import { LayoutDashboard, MapPin, Users, CalendarDays, CalendarRange, Inbox, Plus, Check, X, UserCog } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 import { Shell, Panel, Eyebrow, Btn, Field, Select, Stat, Badge, fmtDate, fmtTime } from "../lib/ui.jsx";
+import Calendar from "./Calendar.jsx";
 
 export default function Admin() {
   const [tab, setTab] = useState("overview");
@@ -18,7 +19,7 @@ export default function Admin() {
       supabase.from("sites").select("*").order("name"),
       supabase.from("assignments").select("*, sites(name), profiles(full_name)"),
       supabase.from("client_sites").select("*, sites(name), profiles(full_name)"),
-      supabase.from("shifts").select("*, sites(name), profiles(full_name)").order("start_ts", { ascending: false }).limit(50),
+      supabase.from("shifts").select("*, sites(name), profiles(full_name)").order("start_ts", { ascending: false }).limit(500),
       supabase.from("time_off_requests").select("*, profiles!time_off_requests_officer_id_fkey(full_name)").order("created_at", { ascending: false }),
     ]);
     setPeople(p.data || []); setSites(s.data || []); setAssigns(a.data || []);
@@ -34,6 +35,7 @@ export default function Admin() {
     { id: "sites", label: "Sites", icon: <MapPin size={13} /> },
     { id: "people", label: "People", icon: <Users size={13} /> },
     { id: "schedule", label: "Schedule", icon: <CalendarDays size={13} /> },
+    { id: "calendar", label: "Calendar", icon: <CalendarRange size={13} /> },
     { id: "requests", label: "Requests", icon: <Inbox size={13} /> },
   ];
 
@@ -43,6 +45,7 @@ export default function Admin() {
       {tab === "sites" && <Sites {...{ sites, reload: loadAll }} />}
       {tab === "people" && <People {...{ people, officers, clients, sites, assigns, clientSites, reload: loadAll }} />}
       {tab === "schedule" && <Schedule {...{ sites, officers, shifts, reload: loadAll }} />}
+      {tab === "calendar" && <Calendar shifts={shifts} sites={sites} officers={officers} />}
       {tab === "requests" && <Requests {...{ reqs, reload: loadAll }} />}
     </Shell>
   );
