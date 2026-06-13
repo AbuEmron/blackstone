@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { LayoutDashboard, CalendarDays, Send, MapPin, Navigation, FileText, AlertTriangle, Camera, Loader2, HelpCircle } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Send, MapPin, Navigation, FileText, AlertTriangle, Camera, Loader2, HelpCircle, Repeat, CheckCircle2 } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 import { useAuth } from "../lib/auth.jsx";
 import { Shell, Panel, Eyebrow, Btn, Field, Select, Badge, fmtDate, fmtTime } from "../lib/ui.jsx";
@@ -78,6 +78,7 @@ export default function Officer() {
     { id: "patrol", label: "Patrol", icon: <Navigation size={13} /> },
     { id: "report", label: "Daily report", icon: <FileText size={13} /> },
     { id: "incident", label: "Incident", icon: <AlertTriangle size={13} /> },
+    { id: "handoff", label: "Handoff", icon: <Repeat size={13} /> },
     { id: "schedule", label: "Schedule", icon: <CalendarDays size={13} /> },
     { id: "callin", label: "Call-in", icon: <Send size={13} /> },
     { id: "help", label: "Help", icon: <HelpCircle size={13} /> },
@@ -132,6 +133,7 @@ export default function Officer() {
       {tab === "patrol" && <Patrol />}
       {tab === "report" && <DailyReport uid={uid} sites={sites} />}
       {tab === "incident" && <Incident uid={uid} sites={sites} />}
+      {tab === "handoff" && <Handoff uid={uid} sites={sites} />}
 
       {tab === "schedule" && (
         <div>
@@ -281,6 +283,90 @@ function Incident({ uid, sites }) {
           {busy ? "Submitting…" : "Submit for supervisor review"}
         </Btn>
       </Panel>
+    </div>
+  );
+}
+
+/* ---------------- shift handoff ---------------- */
+function Handoff({ uid, sites }) {
+  const [list, setList] = useState([]);
+  const [f, setF] = useState({ site: "", notes: "", open_items: "" });
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    const ids = sites.map((s) => s.id);
+    if (!ids.length) { setList([]); return; }
+    const { data } = await supabase
+      .from("handoffs")
+      .select("*, sites(name), from:profiles!handoffs_from_officer_fkey(full_name)")
+      .in("site_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setList(data || []);
+  }
+  useEffect(() => { load(); }, [sites]);
+
+  async function pass() {
+    if (!f.site) return;
+    setBusy(true);
+    await supabase.from("handoffs").insert({
+      site_id: f.site, from_officer: uid,
+      notes: f.notes || null, open_items: f.open_items || null,
+    });
+    setF({ site: "", notes: "", open_items: "" }); setBusy(false); load();
+  }
+  async function acknowledge(id) {
+    await supabase.from("handoffs").update({ acknowledged_at: new Date().toISOString(), acknowledged_by: uid }).eq("id", id);
+    load();
+  }
+
+  return (
+    <div className="grid lg:grid-cols-2 gap-4">
+      <Panel className="p-5 h-fit">
+        <Eyebrow className="!text-ice">Pass down to next shift</Eyebrow>
+        <div className="mt-4 space-y-3">
+          <Select label="Site" value={f.site} onChange={(e) => setF({ ...f, site: e.target.value })}>
+            <option value="">Select your post…</option>
+            {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </Select>
+          <div>
+            <Eyebrow className="mb-1.5">Shift notes</Eyebrow>
+            <textarea rows={3} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })}
+              placeholder="What the next officer should know…"
+              className="w-full rounded-lg bg-panel border border-line px-3 py-2.5 text-sm text-platinum outline-none focus:border-ice placeholder:text-steel/60" />
+          </div>
+          <div>
+            <Eyebrow className="mb-1.5">Open items / follow-ups</Eyebrow>
+            <textarea rows={3} value={f.open_items} onChange={(e) => setF({ ...f, open_items: e.target.value })}
+              placeholder="Gate 3 lock broken, contractor returning at 6am…"
+              className="w-full rounded-lg bg-panel border border-line px-3 py-2.5 text-sm text-platinum outline-none focus:border-ice placeholder:text-steel/60" />
+          </div>
+          <Btn className="w-full" onClick={pass} disabled={busy || !f.site}>
+            <Repeat size={14} className="inline mr-1" />Hand off to next shift
+          </Btn>
+        </div>
+      </Panel>
+
+      <div className="space-y-2">
+        <Eyebrow>Pass-down log</Eyebrow>
+        {list.map((h) => (
+          <Panel key={h.id} className="p-4" style={!h.acknowledged_at ? { borderColor: "#7FB2C9" } : {}}>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-platinum">{h.sites?.name}</div>
+              <Badge tone={h.acknowledged_at ? "on" : "ice"}>{h.acknowledged_at ? "acknowledged" : "new"}</Badge>
+            </div>
+            <div className="text-[11px] text-steel mt-0.5">{h.from?.full_name || "Officer"} · {fmtDate(h.created_at)} {fmtTime(h.created_at)}</div>
+            {h.notes && <div className="text-xs text-steel mt-2"><span className="text-platinum">Notes: </span>{h.notes}</div>}
+            {h.open_items && <div className="text-xs text-steel mt-1"><span className="text-platinum">Open: </span>{h.open_items}</div>}
+            {!h.acknowledged_at && h.from_officer !== uid && (
+              <Btn variant="ghost" className="mt-3 !py-1.5" onClick={() => acknowledge(h.id)}>
+                <CheckCircle2 size={14} className="inline mr-1" />Acknowledge
+              </Btn>
+            )}
+          </Panel>
+        ))}
+        {list.length === 0 && <p className="text-sm text-steel">No handoffs yet for your sites.</p>}
+      </div>
     </div>
   );
 }

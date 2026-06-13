@@ -149,3 +149,31 @@ drop policy if exists ev_read   on storage.objects;
 drop policy if exists ev_upload on storage.objects;
 create policy ev_read   on storage.objects for select using (bucket_id = 'evidence');
 create policy ev_upload on storage.objects for insert to authenticated with check (bucket_id = 'evidence');
+
+-- ============================================================
+-- SHIFT HANDOFFS — pass-down log between officers at a site
+-- ============================================================
+create table if not exists public.handoffs (
+  id              uuid primary key default gen_random_uuid(),
+  site_id         uuid not null references public.sites(id) on delete cascade,
+  from_officer    uuid not null references public.profiles(id) on delete cascade,
+  notes           text,
+  open_items      text,
+  created_at      timestamptz not null default now(),
+  acknowledged_at timestamptz,
+  acknowledged_by uuid references public.profiles(id)
+);
+
+alter table public.handoffs enable row level security;
+
+drop policy if exists h_admin on public.handoffs;
+drop policy if exists h_officer_read on public.handoffs;
+drop policy if exists h_officer_write on public.handoffs;
+drop policy if exists h_officer_ack on public.handoffs;
+create policy h_admin        on public.handoffs for all
+  using (public.is_admin()) with check (public.is_admin());
+create policy h_officer_read on public.handoffs for select using (public.officer_on_site(site_id));
+create policy h_officer_write on public.handoffs for insert
+  with check (from_officer = auth.uid() and public.officer_on_site(site_id));
+create policy h_officer_ack  on public.handoffs for update
+  using (public.officer_on_site(site_id)) with check (public.officer_on_site(site_id));

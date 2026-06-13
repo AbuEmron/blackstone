@@ -1,7 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { Plus, X, Navigation, FileText, AlertTriangle, MapPin, Satellite } from "lucide-react";
+import { Plus, X, Navigation, FileText, AlertTriangle, MapPin, Satellite, Download, Printer, Mail, MessageSquare, Share2 } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 import { Panel, Eyebrow, Btn, Field, Select, Badge, fmtDate, fmtTime } from "../lib/ui.jsx";
+import { downloadPdf, printReport, emailReport, textReport, shareReport, canShare } from "../lib/reportExport.js";
+
+const dt = (s) => (s ? new Date(s).toLocaleString() : "—");
+
+function ReportActions({ report }) {
+  const A = ({ onClick, icon, label }) => (
+    <button onClick={onClick} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-line text-steel hover:text-platinum hover:border-steel text-[11px]">
+      {icon}{label}
+    </button>
+  );
+  return (
+    <div className="mt-3 flex flex-wrap gap-2 pt-3 border-t border-line">
+      <A onClick={() => downloadPdf(report)} icon={<Download size={12} />} label="PDF" />
+      <A onClick={() => printReport(report)} icon={<Printer size={12} />} label="Print" />
+      <A onClick={() => emailReport(report)} icon={<Mail size={12} />} label="Email" />
+      <A onClick={() => textReport(report)} icon={<MessageSquare size={12} />} label="Text" />
+      {canShare() && <A onClick={() => shareReport(report)} icon={<Share2 size={12} />} label="Share" />}
+    </div>
+  );
+}
 
 /* ---------------- checkpoint capture (walk the site) ---------------- */
 export function Checkpoints({ sites }) {
@@ -203,6 +223,12 @@ export function Activity() {
                   </button>
                 ))}
               </div>
+              <ReportActions report={{
+                type: "Incident", title: `Incident — ${r.type}`,
+                subtitle: `${r.sites?.name || ""} · ${dt(r.created_at)}`,
+                rows: [["Type", r.type], ["Severity", r.severity], ["Site", r.sites?.name], ["Officer", r.profiles?.full_name], ["Status", r.status], ["Reported", dt(r.created_at)], ["Narrative", r.narrative]],
+                photos: r.photo_urls || [],
+              }} />
             </Panel>
           ))}
           {incidents.length === 0 && <p className="text-sm text-steel">No incidents reported.</p>}
@@ -212,15 +238,23 @@ export function Activity() {
       {view === "rounds" && (
         <div className="mt-4 space-y-2">
           {rounds.map((r) => (
-            <Panel key={r.id} className="p-4 flex items-center justify-between">
-              <div>
-                <div className="text-sm text-platinum">{r.sites?.name} · {r.profiles?.full_name || "Officer"}</div>
-                <div className="text-xs text-steel mt-0.5">
-                  {fmtDate(r.started_at)} {fmtTime(r.started_at)} · {dur(r.started_at, r.ended_at)} ·
-                  {" "}{scanCounts[r.id] || 0} checkpoints · <span className="inline-flex items-center gap-1"><Satellite size={10} />{r.route?.length || 0} pts</span>
+            <Panel key={r.id} className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-platinum">{r.sites?.name} · {r.profiles?.full_name || "Officer"}</div>
+                  <div className="text-xs text-steel mt-0.5">
+                    {fmtDate(r.started_at)} {fmtTime(r.started_at)} · {dur(r.started_at, r.ended_at)} ·
+                    {" "}{scanCounts[r.id] || 0} checkpoints · <span className="inline-flex items-center gap-1"><Satellite size={10} />{r.route?.length || 0} pts</span>
+                  </div>
                 </div>
+                <Badge tone={r.status === "completed" ? "on" : "ice"}>{r.status}</Badge>
               </div>
-              <Badge tone={r.status === "completed" ? "on" : "ice"}>{r.status}</Badge>
+              <ReportActions report={{
+                type: "PatrolRound", title: "Patrol round",
+                subtitle: `${r.sites?.name || ""} · ${dt(r.started_at)}`,
+                rows: [["Site", r.sites?.name], ["Officer", r.profiles?.full_name], ["Started", dt(r.started_at)], ["Ended", dt(r.ended_at)], ["Duration", dur(r.started_at, r.ended_at)], ["Checkpoints verified", scanCounts[r.id] || 0], ["GPS points", r.route?.length || 0], ["Status", r.status]],
+                photos: [],
+              }} />
             </Panel>
           ))}
           {rounds.length === 0 && <p className="text-sm text-steel">No patrol rounds yet.</p>}
@@ -243,6 +277,12 @@ export function Activity() {
                   {r.photo_urls.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" className="w-14 h-14 object-cover rounded-lg border border-line" /></a>)}
                 </div>
               )}
+              <ReportActions report={{
+                type: "DailyReport", title: "Daily activity report",
+                subtitle: `${r.sites?.name || ""} · ${fmtDate(r.report_date)}`,
+                rows: [["Site", r.sites?.name], ["Officer", r.profiles?.full_name], ["Date", fmtDate(r.report_date)], ["Conditions", r.conditions], ["Summary", r.summary], ["Weather", r.weather]],
+                photos: r.photo_urls || [],
+              }} />
             </Panel>
           ))}
           {reports.length === 0 && <p className="text-sm text-steel">No daily reports yet.</p>}
