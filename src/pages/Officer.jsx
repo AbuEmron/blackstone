@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { LayoutDashboard, CalendarDays, Send, MapPin, Navigation, FileText, AlertTriangle, Camera, Loader2 } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Send, MapPin, Navigation, FileText, AlertTriangle, Camera, Loader2, HelpCircle } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 import { useAuth } from "../lib/auth.jsx";
 import { Shell, Panel, Eyebrow, Btn, Field, Select, Badge, fmtDate, fmtTime } from "../lib/ui.jsx";
 import Patrol from "./Patrol.jsx";
+import Help from "./Help.jsx";
 
 const INCIDENT_TYPES = ["Theft", "Vandalism", "Trespassing", "Injury", "Fire", "Safety hazard", "Vehicle", "Suspicious activity"];
 
@@ -79,6 +80,7 @@ export default function Officer() {
     { id: "incident", label: "Incident", icon: <AlertTriangle size={13} /> },
     { id: "schedule", label: "Schedule", icon: <CalendarDays size={13} /> },
     { id: "callin", label: "Call-in", icon: <Send size={13} /> },
+    { id: "help", label: "Help", icon: <HelpCircle size={13} /> },
   ];
 
   const next = shifts.find((s) => new Date(s.end_ts) > new Date());
@@ -152,6 +154,7 @@ export default function Officer() {
       )}
 
       {tab === "callin" && <CallIn uid={uid} reqs={reqs} reload={loadAll} />}
+      {tab === "help" && <Help role="officer" />}
     </Shell>
   );
 }

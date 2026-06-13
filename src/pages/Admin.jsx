@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { LayoutDashboard, MapPin, Users, CalendarDays, CalendarRange, Inbox, Plus, Check, X, UserCog, ScanLine, Activity as ActivityIcon } from "lucide-react";
+import { LayoutDashboard, MapPin, Users, CalendarDays, CalendarRange, Inbox, Plus, Check, X, UserCog, ScanLine, Activity as ActivityIcon, HelpCircle } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 import { Shell, Panel, Eyebrow, Btn, Field, Select, Stat, Badge, fmtDate, fmtTime } from "../lib/ui.jsx";
 import Calendar from "./Calendar.jsx";
 import { Checkpoints, Activity } from "./AdminReview.jsx";
+import Help from "./Help.jsx";
 
 export default function Admin() {
   const [tab, setTab] = useState("overview");
@@ -40,6 +41,7 @@ export default function Admin() {
     { id: "checkpoints", label: "Checkpoints", icon: <ScanLine size={13} /> },
     { id: "activity", label: "Activity", icon: <ActivityIcon size={13} /> },
     { id: "requests", label: "Requests", icon: <Inbox size={13} /> },
+    { id: "help", label: "Help", icon: <HelpCircle size={13} /> },
   ];
 
   return (
@@ -51,6 +53,7 @@ export default function Admin() {
       {tab === "calendar" && <Calendar shifts={shifts} sites={sites} officers={officers} />}
       {tab === "checkpoints" && <Checkpoints sites={sites} />}
       {tab === "activity" && <Activity />}
+      {tab === "help" && <Help role="admin" />}
       {tab === "requests" && <Requests {...{ reqs, reload: loadAll }} />}
     </Shell>
   );
