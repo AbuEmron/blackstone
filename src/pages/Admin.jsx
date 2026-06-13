@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { LayoutDashboard, MapPin, Users, CalendarDays, CalendarRange, Inbox, Plus, Check, X, UserCog } from "lucide-react";
+import { LayoutDashboard, MapPin, Users, CalendarDays, CalendarRange, Inbox, Plus, Check, X, UserCog, ScanLine, Activity as ActivityIcon } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 import { Shell, Panel, Eyebrow, Btn, Field, Select, Stat, Badge, fmtDate, fmtTime } from "../lib/ui.jsx";
 import Calendar from "./Calendar.jsx";
+import { Checkpoints, Activity } from "./AdminReview.jsx";
 
 export default function Admin() {
   const [tab, setTab] = useState("overview");
@@ -36,6 +37,8 @@ export default function Admin() {
     { id: "people", label: "People", icon: <Users size={13} /> },
     { id: "schedule", label: "Schedule", icon: <CalendarDays size={13} /> },
     { id: "calendar", label: "Calendar", icon: <CalendarRange size={13} /> },
+    { id: "checkpoints", label: "Checkpoints", icon: <ScanLine size={13} /> },
+    { id: "activity", label: "Activity", icon: <ActivityIcon size={13} /> },
     { id: "requests", label: "Requests", icon: <Inbox size={13} /> },
   ];
 
@@ -46,6 +49,8 @@ export default function Admin() {
       {tab === "people" && <People {...{ people, officers, clients, sites, assigns, clientSites, reload: loadAll }} />}
       {tab === "schedule" && <Schedule {...{ sites, officers, shifts, reload: loadAll }} />}
       {tab === "calendar" && <Calendar shifts={shifts} sites={sites} officers={officers} />}
+      {tab === "checkpoints" && <Checkpoints sites={sites} />}
+      {tab === "activity" && <Activity />}
       {tab === "requests" && <Requests {...{ reqs, reload: loadAll }} />}
     </Shell>
   );

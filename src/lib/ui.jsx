@@ -1,5 +1,5 @@
 import React from "react";
-import { Shield, LogOut } from "lucide-react";
+import { Shield, LogOut, Home } from "lucide-react";
 import { useAuth } from "./auth.jsx";
 
 export const Bg = () => <div className="bg-ops" aria-hidden />;
@@ -79,12 +79,17 @@ export function Shell({ title, tabs, tab, setTab, children }) {
       <div className="relative z-10">
         <header className="sticky top-0 z-20 border-b border-line bg-ink/85 backdrop-blur scanline">
           <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <button onClick={() => tabs && setTab(tabs[0].id)} className="flex items-center gap-2" title="Home">
               <Shield size={18} className="text-platinum" />
               <span className="font-semibold tracking-[0.18em] text-sm">BLACKSTONE</span>
               <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-[0.25em] text-steel ml-2">{title}</span>
-            </div>
+            </button>
             <div className="flex items-center gap-3">
+              {tabs && (
+                <button onClick={() => setTab(tabs[0].id)} className="text-steel hover:text-platinum" title="Home">
+                  <Home size={16} />
+                </button>
+              )}
               <span className="hidden sm:inline text-xs text-steel">{profile?.full_name || profile?.role}</span>
               <button onClick={signOut} className="text-steel hover:text-platinum" title="Sign out">
                 <LogOut size={16} />
