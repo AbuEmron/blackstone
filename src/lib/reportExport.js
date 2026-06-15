@@ -116,6 +116,57 @@ export function canShare() {
   return typeof navigator !== "undefined" && !!navigator.canShare;
 }
 
+// generic CSV download: rows is an array of arrays
+export function downloadCsv(name, rows) {
+  const csv = rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// payroll run PDF: meta {period}, lines [{name, reg, ot, rate, gross}], totals {hours, gross}
+export function payrollPdf(meta, lines, totals) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const M = 40, W = doc.internal.pageSize.getWidth();
+  let y = 56;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(20);
+  doc.text("BLACKSTONE SECURITY", M, y);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(110);
+  doc.text("Payroll run", M, y + 18);
+  doc.text(meta.period || "", M, y + 34);
+  doc.setDrawColor(200); doc.line(M, y + 44, W - M, y + 44);
+  y += 66;
+
+  const cols = [M, M + 200, M + 280, M + 360, M + 450];
+  doc.setTextColor(20); doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+  ["Officer", "Reg hrs", "OT hrs", "Rate", "Gross"].forEach((h, i) => doc.text(h, cols[i], y));
+  y += 6; doc.line(M, y, W - M, y); y += 14;
+
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+  lines.forEach((l) => {
+    doc.text(String(l.name || "—"), cols[0], y);
+    doc.text(l.reg.toFixed(2), cols[1], y);
+    doc.text(l.ot.toFixed(2), cols[2], y);
+    doc.text(l.rate != null ? `$${Number(l.rate).toFixed(2)}` : "—", cols[3], y);
+    doc.text(`$${l.gross.toFixed(2)}`, cols[4], y);
+    y += 16;
+    if (y > doc.internal.pageSize.getHeight() - 60) { doc.addPage(); y = 56; }
+  });
+
+  y += 4; doc.line(M, y, W - M, y); y += 16;
+  doc.setFont("helvetica", "bold");
+  doc.text("Totals", cols[0], y);
+  doc.text(totals.hours.toFixed(2), cols[1], y);
+  doc.text(`$${totals.gross.toFixed(2)}`, cols[4], y);
+
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(150);
+  doc.text("Gross pay only — not tax-withheld. Hand to your payroll provider for filing and payment.", M, doc.internal.pageSize.getHeight() - 40);
+  doc.text(`Generated ${new Date().toLocaleString()}`, M, doc.internal.pageSize.getHeight() - 26);
+  doc.save(`Blackstone-Payroll-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
 export async function shareReport(r) {
   try {
     const blob = buildPdf(r).output("blob");

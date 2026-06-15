@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { LayoutDashboard, CalendarDays, Send, MapPin, Navigation, FileText, AlertTriangle, Camera, Loader2, HelpCircle, Repeat, CheckCircle2 } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Send, MapPin, Navigation, FileText, AlertTriangle, Camera, Loader2, HelpCircle, Repeat, CheckCircle2, Clock } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 import { useAuth } from "../lib/auth.jsx";
 import { Shell, Panel, Eyebrow, Btn, Field, Select, Badge, fmtDate, fmtTime } from "../lib/ui.jsx";
@@ -75,6 +75,7 @@ export default function Officer() {
 
   const tabs = [
     { id: "home", label: "Command", icon: <LayoutDashboard size={13} /> },
+    { id: "clock", label: "Time clock", icon: <Clock size={13} /> },
     { id: "patrol", label: "Patrol", icon: <Navigation size={13} /> },
     { id: "report", label: "Daily report", icon: <FileText size={13} /> },
     { id: "incident", label: "Incident", icon: <AlertTriangle size={13} /> },
@@ -131,6 +132,7 @@ export default function Officer() {
       )}
 
       {tab === "patrol" && <Patrol />}
+      {tab === "clock" && <TimeClock uid={uid} sites={sites} />}
       {tab === "report" && <DailyReport uid={uid} sites={sites} />}
       {tab === "incident" && <Incident uid={uid} sites={sites} />}
       {tab === "handoff" && <Handoff uid={uid} sites={sites} />}
@@ -283,6 +285,93 @@ function Incident({ uid, sites }) {
           {busy ? "Submitting…" : "Submit for supervisor review"}
         </Btn>
       </Panel>
+    </div>
+  );
+}
+
+/* ---------------- time clock ---------------- */
+function TimeClock({ uid, sites }) {
+  const [open, setOpen] = useState(null);
+  const [siteId, setSiteId] = useState("");
+  const [today, setToday] = useState([]);
+  const [tick, setTick] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    if (!uid) return;
+    const oc = await supabase.from("time_entries").select("*").eq("officer_id", uid).is("clock_out", null).order("clock_in", { ascending: false }).limit(1).maybeSingle();
+    setOpen(oc.data || null);
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const td = await supabase.from("time_entries").select("*, sites(name)").eq("officer_id", uid).gte("clock_in", start.toISOString()).order("clock_in", { ascending: false });
+    setToday(td.data || []);
+  }
+  useEffect(() => { load(); }, [uid]);
+  useEffect(() => { const t = setInterval(() => setTick((x) => x + 1), 1000); return () => clearInterval(t); }, []);
+
+  async function clockIn() {
+    setBusy(true);
+    let lat = null, lng = null;
+    try {
+      const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+      lat = pos.coords.latitude; lng = pos.coords.longitude;
+    } catch { /* geo optional */ }
+    await supabase.from("time_entries").insert({ officer_id: uid, site_id: siteId || null, clock_in: new Date().toISOString(), source: "clock", lat, lng });
+    setBusy(false); load();
+  }
+  async function clockOut() {
+    if (!open) return;
+    setBusy(true);
+    await supabase.from("time_entries").update({ clock_out: new Date().toISOString() }).eq("id", open.id);
+    setBusy(false); load();
+  }
+
+  const elapsed = open ? Math.floor((Date.now() - new Date(open.clock_in)) / 1000) : 0;
+  const hh = String(Math.floor(elapsed / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0");
+  const ss = String(elapsed % 60).padStart(2, "0");
+  const todayHours = today.reduce((a, e) => a + (e.clock_out ? (new Date(e.clock_out) - new Date(e.clock_in)) / 3600000 : 0), 0);
+
+  return (
+    <div>
+      <Eyebrow className="!text-ice">Time clock</Eyebrow>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight">{open ? "On the clock" : "Clock in"}</h1>
+
+      <Panel className="mt-4 p-6 text-center">
+        {open ? (
+          <>
+            <div className="text-5xl font-mono font-semibold tracking-tight">{hh}:{mm}:{ss}</div>
+            <div className="text-xs text-steel mt-2">Since {fmtTime(open.clock_in)}{open.site_id && today.find((t) => t.id === open.id)?.sites?.name ? ` · ${today.find((t) => t.id === open.id).sites.name}` : ""}</div>
+            <Btn className="mt-5 w-full" variant="danger" onClick={clockOut} disabled={busy}>{busy ? "…" : "Clock out"}</Btn>
+          </>
+        ) : (
+          <>
+            <Clock size={36} className="text-steel mx-auto" />
+            <div className="mt-4 max-w-xs mx-auto text-left">
+              <Select label="Post (optional)" value={siteId} onChange={(e) => setSiteId(e.target.value)}>
+                <option value="">No specific site</option>
+                {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </Select>
+            </div>
+            <Btn className="mt-4 w-full" onClick={clockIn} disabled={busy}>{busy ? "…" : "Clock in"}</Btn>
+          </>
+        )}
+      </Panel>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <Eyebrow>Today</Eyebrow>
+          <span className="text-xs text-steel">{todayHours.toFixed(2)} h</span>
+        </div>
+        <div className="mt-2 space-y-2">
+          {today.map((e) => (
+            <Panel key={e.id} className="p-3 flex items-center justify-between">
+              <div className="text-sm text-platinum">{e.sites?.name || "—"}</div>
+              <div className="text-xs text-steel">{fmtTime(e.clock_in)} – {e.clock_out ? fmtTime(e.clock_out) : <span className="text-emerald-400">active</span>}</div>
+            </Panel>
+          ))}
+          {today.length === 0 && <p className="text-sm text-steel">No entries today.</p>}
+        </div>
+      </div>
     </div>
   );
 }

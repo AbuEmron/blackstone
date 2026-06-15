@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Users, ScanLine, CalendarDays, Activity as ActivityIcon, Inbox, Navigation, FileText, AlertTriangle, Send, WifiOff } from "lucide-react";
+import { MapPin, Users, ScanLine, CalendarDays, Activity as ActivityIcon, Inbox, Navigation, FileText, AlertTriangle, Send, WifiOff, DollarSign, Clock, Repeat } from "lucide-react";
 import { Panel, Eyebrow } from "../lib/ui.jsx";
 
 const ADMIN = [
@@ -9,17 +9,20 @@ const ADMIN = [
   { icon: <ScanLine size={16} />, title: "Program the patrol route", body: "Open Checkpoints, choose the site, then physically walk to each spot on the property. At each one tap “Capture this spot” to record its GPS point, snap a reference photo, name it, and save. That’s the whole route — no QR codes, no printing." },
   { icon: <ScanLine size={16} />, title: "Set the verify radius", body: "Each checkpoint has a radius (default 40m). That’s how close an officer must get for it to auto-verify. Tighten it for small sites, widen it for large lots." },
   { icon: <CalendarDays size={16} />, title: "Schedule shifts", body: "In Schedule, pick a site, an officer (or leave it open), and start/end times. The Calendar tab shows every shift color-coded by site, filterable by officer." },
+  { icon: <DollarSign size={16} />, title: "Run payroll", body: "Open Payroll, set each officer's hourly rate, pick a pay period (this week, last week, this month, or custom), and the app totals regular and overtime hours and gross pay. Export to PDF or CSV for your accountant or payroll provider. (Gross pay only — not tax filing or direct deposit.)" },
   { icon: <ActivityIcon size={16} />, title: "Review the field", body: "The Activity tab shows incidents (with photos and status you control), completed patrol rounds with GPS points and checkpoints hit, and daily reports." },
   { icon: <Inbox size={16} />, title: "Approve time off", body: "Call-in and time-off requests land in the Requests tab. Approve or deny with one tap." },
 ];
 
 const OFFICER = [
+  { icon: <Clock size={16} />, title: "Clock in and out", body: "Open Time clock, pick your post, and tap Clock in — a live timer runs your shift. Tap Clock out when you leave. Your hours feed straight into payroll." },
   { icon: <Navigation size={16} />, title: "Run a patrol", body: "Tap Patrol, choose your post, and hit “Start round.” Your location turns on only for the round and shuts off the moment you end it." },
   { icon: <MapPin size={16} />, title: "Checkpoints verify themselves", body: "Just walk your route. Each checkpoint checks off automatically as you reach it — you’ll see how many meters away the next one is. If GPS is being stubborn, tap Verify to do it manually." },
   { icon: <WifiOff size={16} />, title: "No signal? Keep going", body: "Patrols work with zero service — the round runs and saves right on your phone, then uploads by itself the moment you’re back in coverage. You’ll see “waiting to sync” until it does." },
   { icon: <FileText size={16} />, title: "Daily report", body: "End of shift, open Daily report: note conditions, a summary, the weather, and add photos straight from your camera." },
   { icon: <AlertTriangle size={16} />, title: "Report an incident", body: "Tap Incident, pick the type and severity, write what happened, and attach photos. It routes to the supervisor instantly." },
   { icon: <Send size={16} />, title: "Request time off", body: "Use Call-in to request a day off, PTO, or call out. You’ll see the status update once the admin reviews it." },
+  { icon: <Repeat size={16} />, title: "Hand off your shift", body: "In Handoff, leave notes and open items for the next officer at your post. The next guard sees it flagged as new and acknowledges it." },
 ];
 
 export default function Help({ role = "officer" }) {
